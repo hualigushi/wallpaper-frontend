@@ -1,13 +1,13 @@
 const routes = [
     {
         path: '/',
-        name: '主题列表',
-        component: () => import('@/views/theme/index.vue'),
+        name: '合集列表',
+        component: () => import('@/views/collectionList/index.vue'),
     },
     {
-        path: '/themeForm',
-        name: '新增主题',
-        component: () => import('@/views/themeForm/index.vue'),
+        path: '/collectionForm',
+        name: '合集详情',
+        component: () => import('@/views/collectionForm/index.vue'),
     },
 ]
 
