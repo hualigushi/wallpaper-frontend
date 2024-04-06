@@ -1,6 +1,6 @@
 <template>
     <WallpaperTitle />
-    <el-button type="primary" @click="addCollection">新增合集</el-button>
+    <el-button type="primary" @click="goToCollectionForm()">新增合集</el-button>
     <el-divider />
     <h2>壁纸合集列表</h2>
     <div class="search-wrapper">
@@ -12,14 +12,15 @@
     </div>
     <el-table :data="collectionList.tableData" stripe style="width: 100%">
         <el-table-column prop="title" label="合集名称" />
+        <el-table-column prop="enTitle" label="合集名称英文" width="180" />
         <el-table-column prop="description" label="合集描述" width="180" />
-        <el-table-column prop="downloadCount" label="下载量" width="160" />
+        <el-table-column prop="downloadCount" label="下载量" width="140" />
         <el-table-column prop="updatedAt" label="修改时间" width="180" />
         <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column fixed="right" label="操作" width="180">
             <template #default="scope">
-                <el-button link type="primary" size="small" @click="handleDetail">详情</el-button>
-                <el-button link type="primary" size="small" @click="handleEdit">编辑</el-button>
+                <el-button link type="primary" size="small"
+                    @click.prevent="goToCollectionForm(scope.$index)">编辑</el-button>
                 <el-button link type="primary" size="small" @click.prevent="handleDelete(scope.$index)">删除</el-button>
             </template>
         </el-table-column>
@@ -55,6 +56,7 @@ import request from '@/utils/request';
 import { CollectionItemProps } from './interface';
 
 const router = useRouter();
+
 const collectionName = ref('')
 let collectionList = reactive<{
     tableData: CollectionItemProps[]
@@ -62,7 +64,7 @@ let collectionList = reactive<{
 
 const getCollectionList = async () => {
     const result = await request({
-        url: 'http://localhost:3000/getCollectionList',
+        url: '/getCollectionList',
         method: 'post',
         data: {
             collectionName: collectionName.value
@@ -80,19 +82,18 @@ const getCollectionList = async () => {
 
 getCollectionList()
 
-const addCollection = () => {
-    router.push('/collectionForm')
-}
-const handleSearch = () => {
-    console.log('submit!', collectionName.value)
-    getCollectionList()
+const goToCollectionForm = (index?: number) => {
+    if (index !== undefined) {
+        const { id } = collectionList.tableData[index]
+        router.push({ path: '/collectionForm', query: { id } })
+    } else {
+        router.push('/collectionForm')
+    }
 }
 
-const handleDetail = () => {
-    console.log('click')
-}
-const handleEdit = () => {
-    console.log('click')
+const handleSearch = () => {
+    console.log('handleSearch', collectionName.value)
+    getCollectionList()
 }
 
 const dialogVisible = ref(false)
@@ -101,10 +102,10 @@ const handleDelete = (index: number) => {
     deleteId.value = collectionList.tableData[index].id
     dialogVisible.value = true
 }
-const handleConfirmDelete = (index: number) => {
+const handleConfirmDelete = () => {
     if (deleteId.value) {
         request({
-            url: 'http://localhost:3000/deleteCollection',
+            url: '/deleteCollection',
             method: 'post',
             data: {
                 id: deleteId.value
