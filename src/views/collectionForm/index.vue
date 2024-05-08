@@ -40,7 +40,7 @@
     </el-form>
     <div v-show="!!collectionForm.id">
         <el-divider />
-        <el-button type="primary" @click="dialogFormVisible = true">新增壁纸</el-button>
+        <el-button type="primary" @click="handleAddWallpaper">新增壁纸</el-button>
         <h3>壁纸列表</h3>
         <el-table :data="wallpaperList.tableData" stripe style="width: 100%">
             <el-table-column prop="title" label="壁纸名称" />
@@ -95,6 +95,11 @@
     ]
         " />
             </el-form-item>
+            <el-form-item label="作者" label-width="140px">
+                <el-select v-model="wallpaperForm.authorId">
+                    <el-option v-for="item in authorList" :key="item.id" :label="item.name" :value="item.id" />
+                </el-select>
+            </el-form-item>
             <el-form-item>
                 <el-button type="primary" @click="handleSaveWallpaper(wallpaperFormRef)">保存</el-button>
                 <div class="save-tip" v-show="!!wallpaperForm.id">当前合集已存在，点击保存为修改该合集数据</div>
@@ -147,7 +152,7 @@ import { Plus, WarnTriangleFilled } from '@element-plus/icons-vue'
 import WallpaperTitle from '@/components/WallpaperTitle.vue';
 import request from '@/utils/request';
 import { isCredentialsExpired } from '@/utils/upload'
-import { CollectionFormProps, WallpaperItemProps, WallpaperFormProps } from './interface'
+import { CollectionFormProps, WallpaperItemProps, WallpaperFormProps, AuthorProps } from './interface'
 
 const router = useRouter();
 const route = useRoute()
@@ -156,12 +161,17 @@ const goToCollectionList = () => {
     router.push('/')
 }
 
+const authorList = ref<AuthorProps[]>([])
+
 const getAuthorList = async () => {
     const result = await request({
         url: '/getAuthorList',
         method: 'post',
     });
-    wallpaperForm.authorId = result.data[0].id
+    authorList.value = result.data
+    if(result.data.length){
+        wallpaperForm.authorId = result.data[result.data.length-1].id
+    }
 }
 
 getAuthorList()
@@ -283,6 +293,16 @@ const wallpaperForm = reactive<WallpaperFormProps>({
     collectionId: '',
     authorId: ''
 })
+
+const handleAddWallpaper=()=>{
+    wallpaperForm.id = ''
+    wallpaperForm.title = ''
+    wallpaperForm.enTitle = ''
+    wallpaperForm.tags = ''
+    wallpaperForm.authorId = authorList.value[authorList.value.length-1].id
+    dialogFormVisible.value = true
+}
+
 const handleSaveWallpaper = (formEl: FormInstance | undefined) => {
     if (!formEl) return
     formEl.validate(async (valid) => {
@@ -338,6 +358,7 @@ const handleEditWallpaper = (index: number) => {
     wallpaperForm.title = wallpaperList.tableData[index].title
     wallpaperForm.enTitle = wallpaperList.tableData[index].enTitle
     wallpaperForm.tags = wallpaperList.tableData[index].tags
+    wallpaperForm.authorId = wallpaperList.tableData[index].authorId
     getImgs(collectionForm.enTitle, wallpaperForm.enTitle)
     dialogFormVisible.value = true
 }

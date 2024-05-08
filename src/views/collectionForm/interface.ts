@@ -22,4 +22,10 @@ export interface WallpaperItemProps {
     downloadCount:string;
     createdAt:string;
     updatedAt:string;
+    authorId:string;
+}
+
+export interface AuthorProps {
+    id: string;
+    name: string;
 }
