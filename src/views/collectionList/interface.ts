@@ -6,4 +6,5 @@ export interface CollectionItemProps {
     downloadCount:string;
     createdAt:string;
     updatedAt:string;
+    published: boolean;
 }

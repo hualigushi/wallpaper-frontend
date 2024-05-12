@@ -10,15 +10,28 @@
         </div>
         <el-button type="primary" @click="handleSearch" class="search-btn">查询</el-button>
     </div>
-    <el-table :data="collectionList.tableData" stripe style="width: 100%">
+    <el-button type="primary" @click.prevent="handleBatchPublish(true)">取消发布</el-button>
+    <el-button type="primary" @click.prevent="handleBatchPublish(false)">发布</el-button>
+    <el-table :data="collectionList.tableData" stripe style="width: 100%" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="title" label="合集名称" />
         <el-table-column prop="enTitle" label="合集名称英文" width="180" />
         <el-table-column prop="description" label="合集描述" width="180" />
-        <el-table-column prop="downloadCount" label="下载量" width="140" />
+        <el-table-column prop="downloadCount" label="下载量" width="120" />
+        <el-table-column prop="published" label="发布状态" width="120">
+            <template #default="scope">
+                <el-tag type="success" v-if="scope.row.published">已发布</el-tag>
+                <el-tag type="danger" v-if="!scope.row.published">未发布</el-tag>
+            </template>
+        </el-table-column>
         <el-table-column prop="updatedAt" label="修改时间" width="180" />
         <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column fixed="right" label="操作" width="180">
             <template #default="scope">
+                <el-button v-if="scope.row.published" link type="primary" size="small"
+                    @click.prevent="handlePublish(scope.$index)">取消发布</el-button>
+                <el-button v-if="!scope.row.published" link type="primary" size="small"
+                    @click.prevent="handlePublish(scope.$index)">发布</el-button>
                 <el-button link type="primary" size="small"
                     @click.prevent="goToCollectionForm(scope.$index)">编辑</el-button>
                 <el-button link type="primary" size="small" @click.prevent="handleDelete(scope.$index)">删除</el-button>
@@ -49,7 +62,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElTable } from 'element-plus'
 import { WarnTriangleFilled } from '@element-plus/icons-vue'
 import WallpaperTitle from '@/components/WallpaperTitle.vue';
 import request from '@/utils/request';
@@ -58,6 +71,7 @@ import { CollectionItemProps } from './interface';
 const router = useRouter();
 
 const collectionName = ref('')
+const multipleSelection = ref<CollectionItemProps[]>([])
 let collectionList = reactive<{
     tableData: CollectionItemProps[]
 }>({ tableData: [] })
@@ -102,6 +116,7 @@ const handleDelete = (index: number) => {
     deleteId.value = collectionList.tableData[index].id
     dialogVisible.value = true
 }
+
 const handleConfirmDelete = () => {
     if (deleteId.value) {
         request({
@@ -122,6 +137,45 @@ const handleConfirmDelete = () => {
     }
 }
 
+const handleSelectionChange = (val: CollectionItemProps[]) => {
+    multipleSelection.value = val
+}
+
+const handlePublish = (index: number) => {
+    const publishedStatus = collectionList.tableData[index].published
+    request({
+        url: '/toggleCollectionPublishStatus',
+        method: 'post',
+        data: {
+            collectionIds: [collectionList.tableData[index].id],
+            publishedStatus
+        }
+    }).then(() => {
+        getCollectionList()
+        ElMessage({
+            message: `${publishedStatus ? '取消' : ''}发布成功`,
+            type: 'success',
+        })
+    })
+}
+
+const handleBatchPublish = (publishedStatus:boolean) => {
+    const collectionIds = multipleSelection.value.map(item => item.id)
+    request({
+        url: '/toggleCollectionPublishStatus',
+        method: 'post',
+        data: {
+            collectionIds,
+            publishedStatus
+        }
+    }).then(() => {
+        getCollectionList()
+        ElMessage({
+            message: `批量${publishedStatus ? '取消' : ''}发布成功`,
+            type: 'success',
+        })
+    })
+}
 
 // const currentPage = ref(1)
 // const pageSize = ref(20)

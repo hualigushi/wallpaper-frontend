@@ -451,11 +451,10 @@ const uploadHttpRequest = async (option) => {
     });
 
     try {
-        const clientResult = await client.put(`${collectionForm.enTitle}/${wallpaperForm.enTitle}/${option.file.name}`, option.file);
+        const clientResult = await client.put(`${collectionForm.enTitle}/${wallpaperForm.enTitle}/cover-${option.file.name}`, option.file);
         console.log('qly clientResult', clientResult);
     } catch (e) {
         console.log("qly ~ uploadHttpRequest ~ e:", e)
-
     }
 }
 
