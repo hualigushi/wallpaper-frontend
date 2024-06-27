@@ -7,4 +7,5 @@ export interface CollectionItemProps {
     createdAt:string;
     updatedAt:string;
     published: boolean;
+    publishAt?: string;
 }

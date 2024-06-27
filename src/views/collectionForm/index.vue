@@ -33,14 +33,14 @@
     ]">
             <el-input v-model="collectionForm.description" />
         </el-form-item>
-        <el-form-item>
+        <el-form-item v-if="!isView">
             <el-button type="primary" @click="handleSaveCollection(collectionFormRef)">保存</el-button>
             <div class="save-tip" v-show="!!collectionForm.id">当前合集已存在，点击保存为修改该合集数据</div>
         </el-form-item>
     </el-form>
     <div v-show="!!collectionForm.id">
         <el-divider />
-        <el-button type="primary" @click="handleAddWallpaper">新增壁纸</el-button>
+        <el-button v-if="!isView" type="primary" @click="handleAddWallpaper">新增壁纸</el-button>
         <h3>壁纸列表</h3>
         <el-table :data="wallpaperList.tableData" stripe style="width: 100%">
             <el-table-column prop="title" label="壁纸名称" />
@@ -52,7 +52,7 @@
             <el-table-column fixed="right" label="操作" width="180">
                 <template #default="scope">
                     <el-button link type="primary" size="small"
-                        @click.prevent="handleEditWallpaper(scope.$index)">编辑</el-button>
+                        @click.prevent="handleEditWallpaper(scope.$index)">{{ isView ? '查看' : '编辑' }}</el-button>
                     <el-button link type="primary" size="small"
                         @click.prevent="handleDeleteWallpaper(scope.$index)">删除</el-button>
                 </template>
@@ -96,11 +96,12 @@
         " />
             </el-form-item>
             <el-form-item label="作者" label-width="140px">
-                <el-select v-model="wallpaperForm.authorId">
+                <el-select v-model="wallpaperForm.authorId" :disabled="!authorList.length">
                     <el-option v-for="item in authorList" :key="item.id" :label="item.name" :value="item.id" />
                 </el-select>
+                <span v-if="!authorList.length">作者列表为空，请先新增作者</span>
             </el-form-item>
-            <el-form-item>
+            <el-form-item v-if="!isView">
                 <el-button type="primary" @click="handleSaveWallpaper(wallpaperFormRef)">保存</el-button>
                 <div class="save-tip" v-show="!!wallpaperForm.id">当前合集已存在，点击保存为修改该合集数据</div>
             </el-form-item>
@@ -108,16 +109,17 @@
         <div v-show="!!wallpaperForm.id">
             <el-divider />
             <h3>壁纸封面(只能上传一张图片)</h3>
-            <el-upload v-model:file-list="wallpaperCoverImg" action="" :http-request="uploadHttpRequest"
-                list-type="picture-card" :on-success="handleSuccess" :on-remove="handleRemoveImg" :limit="1">
+            <el-upload v-model:file-list="wallpaperCoverImg" action="" :http-request="uploadCoverImgRequest"
+                list-type="picture-card" :on-success="handleSuccess" :on-remove="handleRemoveImg" :limit="1"
+                :disabled="isView">
                 <el-icon>
                     <Plus />
                 </el-icon>
             </el-upload>
             <el-divider />
             <h3>壁纸</h3>
-            <el-upload v-model:file-list="wallpaperImg" action="" :http-request="uploadHttpRequest"
-                list-type="picture-card" :on-success="handleSuccess" :on-remove="handleRemoveImg">
+            <el-upload v-model:file-list="wallpaperImg" action="" :http-request="uploadImgRequest"
+                list-type="picture-card" :on-success="handleSuccess" :on-remove="handleRemoveImg" :disabled="isView">
                 <el-icon>
                     <Plus />
                 </el-icon>
@@ -147,7 +149,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus'
-import type { FormInstance, UploadProps, UploadUserFile } from 'element-plus'
+import type { FormInstance, UploadProps, UploadUserFile, UploadRequestOptions } from 'element-plus'
 import { Plus, WarnTriangleFilled } from '@element-plus/icons-vue'
 import WallpaperTitle from '@/components/WallpaperTitle.vue';
 import request from '@/utils/request';
@@ -156,6 +158,7 @@ import { CollectionFormProps, WallpaperItemProps, WallpaperFormProps, AuthorProp
 
 const router = useRouter();
 const route = useRoute()
+const isView = route.query.type === 'publishedData'
 
 const goToCollectionList = () => {
     router.push('/')
@@ -169,8 +172,8 @@ const getAuthorList = async () => {
         method: 'post',
     });
     authorList.value = result.data
-    if(result.data.length){
-        wallpaperForm.authorId = result.data[result.data.length-1].id
+    if (result.data.length) {
+        wallpaperForm.authorId = result.data[result.data.length - 1].id
     }
 }
 
@@ -278,7 +281,6 @@ const getImgs = async (collectionEnTitle: string, wallpaperEnTitle: string) => {
             wallpaperEnTitle
         }
     });
-    console.log("qly ~ getImgs ~ result:", result)
     wallpaperCoverImg.value = result.data.filter((item: UploadUserFile) => item.name.includes('cover'))
     wallpaperImg.value = result.data.filter((item: UploadUserFile) => !item.name.includes('cover'))
 }
@@ -294,12 +296,16 @@ const wallpaperForm = reactive<WallpaperFormProps>({
     authorId: ''
 })
 
-const handleAddWallpaper=()=>{
+const handleAddWallpaper = () => {
     wallpaperForm.id = ''
     wallpaperForm.title = ''
     wallpaperForm.enTitle = ''
     wallpaperForm.tags = ''
-    wallpaperForm.authorId = authorList.value[authorList.value.length-1].id
+    wallpaperCoverImg.value = []
+    wallpaperImg.value = []
+    if (authorList.value.length) {
+        wallpaperForm.authorId = authorList.value[authorList.value.length - 1].id
+    }
     dialogFormVisible.value = true
 }
 
@@ -426,9 +432,16 @@ const handleRemoveImg: UploadProps['onRemove'] = async (uploadFile) => {
 }
 
 let credentials = ref(null);
-// @ts-ignore
-const uploadHttpRequest = async (option) => {
-    console.log("qly ~ uploadHttpRequest ~ options:", option)
+
+const uploadCoverImgRequest = async (option: UploadRequestOptions) => {
+    uploadHttpRequest(option, 'cover')
+}
+const uploadImgRequest = async (option: UploadRequestOptions) => {
+    uploadHttpRequest(option, 'img')
+}
+
+const uploadHttpRequest = async (option: UploadRequestOptions, type: string) => {
+    console.log("qly ~ uploadHttpRequest ~ options:", option, type)
     if (isCredentialsExpired(credentials.value)) {
         const result = await request({
             url: "/get_sts_token_for_oss_upload",
@@ -451,7 +464,9 @@ const uploadHttpRequest = async (option) => {
     });
 
     try {
-        const clientResult = await client.put(`${collectionForm.enTitle}/${wallpaperForm.enTitle}/cover-${option.file.name}`, option.file);
+        const fileNamePrefix = `${collectionForm.enTitle}/${wallpaperForm.enTitle}`
+        const fileName = type === 'cover' ? `cover-${option.file.name}` : option.file.name
+        const clientResult = await client.put(`${fileNamePrefix}/${fileName}`, option.file);
         console.log('qly clientResult', clientResult);
     } catch (e) {
         console.log("qly ~ uploadHttpRequest ~ e:", e)

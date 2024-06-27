@@ -3,41 +3,78 @@
     <el-button type="primary" @click="goToCollectionForm()">新增合集</el-button>
     <el-divider />
     <h2>壁纸合集列表</h2>
-    <div class="search-wrapper">
-        <div>
-            <span class="search-label">合集名称</span>
-            <el-input v-model="collectionName" style="width: 240px" placeholder="请输入壁纸合集名称" />
-        </div>
-        <el-button type="primary" @click="handleSearch" class="search-btn">查询</el-button>
-    </div>
-    <el-button type="primary" @click.prevent="handleBatchPublish(true)">取消发布</el-button>
-    <el-button type="primary" @click.prevent="handleBatchPublish(false)">发布</el-button>
-    <el-table :data="collectionList.tableData" stripe style="width: 100%" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="55" />
-        <el-table-column prop="title" label="合集名称" />
-        <el-table-column prop="enTitle" label="合集名称英文" width="180" />
-        <el-table-column prop="description" label="合集描述" width="180" />
-        <el-table-column prop="downloadCount" label="下载量" width="120" />
-        <el-table-column prop="published" label="发布状态" width="120">
-            <template #default="scope">
-                <el-tag type="success" v-if="scope.row.published">已发布</el-tag>
-                <el-tag type="danger" v-if="!scope.row.published">未发布</el-tag>
-            </template>
-        </el-table-column>
-        <el-table-column prop="updatedAt" label="修改时间" width="180" />
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
-        <el-table-column fixed="right" label="操作" width="180">
-            <template #default="scope">
-                <el-button v-if="scope.row.published" link type="primary" size="small"
-                    @click.prevent="handlePublish(scope.$index)">取消发布</el-button>
-                <el-button v-if="!scope.row.published" link type="primary" size="small"
-                    @click.prevent="handlePublish(scope.$index)">发布</el-button>
-                <el-button link type="primary" size="small"
-                    @click.prevent="goToCollectionForm(scope.$index)">编辑</el-button>
-                <el-button link type="primary" size="small" @click.prevent="handleDelete(scope.$index)">删除</el-button>
-            </template>
-        </el-table-column>
-    </el-table>
+    <el-tabs v-model="activeName">
+        <el-tab-pane label="未发布合集" name="first">
+            <div class="search-wrapper">
+                <div>
+                    <span class="search-label">合集名称</span>
+                    <el-input v-model="collectionName" style="width: 240px" placeholder="请输入壁纸合集名称" />
+                </div>
+                <el-button type="primary" @click="handleSearch" class="search-btn">查询</el-button>
+            </div>
+            <el-button type="primary" @click.prevent="handlePublishBatchPublish">发布</el-button>
+            <el-table :data="collectionList.unpublishData" stripe style="width: 100%"
+                @selection-change="handleUnpublishSelectionChange">
+                <el-table-column type="selection" width="55" />
+                <el-table-column prop="title" label="合集名称" />
+                <el-table-column prop="enTitle" label="合集名称英文" width="180" />
+                <el-table-column prop="description" label="合集描述" width="180" />
+                <el-table-column prop="downloadCount" label="下载量" width="120" />
+                <el-table-column prop="published" label="发布状态" width="120">
+                    <template #default="scope">
+                        <el-tag type="success" v-if="scope.row.published">已发布</el-tag>
+                        <el-tag type="danger" v-if="!scope.row.published">未发布</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="publishAt" label="首次发布时间" width="180" />
+                <el-table-column fixed="right" label="操作" width="180">
+                    <template #default="scope">
+                        <el-button link type="primary" size="small"
+                            @click.prevent="handlePublish(scope.row)">发布</el-button>
+                        <el-button link type="primary" size="small"
+                            @click.prevent="goToCollectionForm(scope.$index, 'unpublishData')">编辑</el-button>
+                        <el-button link type="primary" size="small"
+                            @click.prevent="handleDelete(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="已发布合集" name="second">
+            <div class="search-wrapper">
+                <div>
+                    <span class="search-label">合集名称</span>
+                    <el-input v-model="collectionName" style="width: 240px" placeholder="请输入壁纸合集名称" />
+                </div>
+                <el-button type="primary" @click="handleSearch" class="search-btn">查询</el-button>
+            </div>
+            <el-button type="primary" @click.prevent="handleUnPublishedBatchPublish">取消发布</el-button>
+            <el-table :data="collectionList.publishedData" stripe style="width: 100%"
+                @selection-change="handlePublishedSelectionChange">
+                <el-table-column type="selection" width="55" />
+                <el-table-column prop="title" label="合集名称" />
+                <el-table-column prop="enTitle" label="合集名称英文" width="180" />
+                <el-table-column prop="description" label="合集描述" width="180" />
+                <el-table-column prop="downloadCount" label="下载量" width="120" />
+                <el-table-column prop="published" label="发布状态" width="120">
+                    <template #default="scope">
+                        <el-tag type="success" v-if="scope.row.published">已发布</el-tag>
+                        <el-tag type="danger" v-if="!scope.row.published">未发布</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="publishAt" label="首次发布时间" width="180" />
+                <el-table-column fixed="right" label="操作" width="180">
+                    <template #default="scope">
+                        <el-button link type="primary" size="small"
+                            @click.prevent="handlePublish(scope.row)">取消发布</el-button>
+                        <el-button link type="primary" size="small"
+                            @click.prevent="goToCollectionForm(scope.$index, 'publishedData')">查看</el-button>
+                        <!-- <el-button link type="primary" size="small"
+                            @click.prevent="handleDelete(scope.$index)">删除</el-button> -->
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-tab-pane>
+    </el-tabs>
     <!-- TODO: 分页功能暂时不做 -->
     <!-- <el-pagination class="pagination" v-model:current-page="currentPage" v-model:page-size="pageSize"
         layout="prev, pager, next, jumper" :total="total" @size-change="handleSizeChange"
@@ -70,11 +107,18 @@ import { CollectionItemProps } from './interface';
 
 const router = useRouter();
 
+const activeName = ref('first')
 const collectionName = ref('')
-const multipleSelection = ref<CollectionItemProps[]>([])
+const unpublishMultipleSelection = ref<CollectionItemProps[]>([])
+const publishedMultipleSelection = ref<CollectionItemProps[]>([])
 let collectionList = reactive<{
-    tableData: CollectionItemProps[]
-}>({ tableData: [] })
+    unpublishData: CollectionItemProps[],
+    publishedData: CollectionItemProps[],
+
+}>({
+    unpublishData: [],
+    publishedData: [],
+})
 
 const getCollectionList = async () => {
     const result = await request({
@@ -84,22 +128,32 @@ const getCollectionList = async () => {
             collectionName: collectionName.value
         }
     });
-    const formatResultData: CollectionItemProps[] = result.data.map((item: CollectionItemProps) => {
-        return {
-            ...item,
-            createdAt: new Date(item.createdAt).toLocaleString(),
-            updatedAt: new Date(item.updatedAt).toLocaleString(),
+    let unpublishData: CollectionItemProps[] = []
+    let publishedData: CollectionItemProps[] = []
+    result.data.forEach((item: CollectionItemProps) => {
+        if (item.published) {
+            publishedData.push({
+                ...item,
+                publishAt: !item.publishAt ? '':new Date(item.publishAt!).toLocaleString(),
+            })
+        } else {
+            unpublishData.push({
+                ...item,
+                publishAt: !item.publishAt ? '':new Date(item.publishAt!).toLocaleString(),
+            })
         }
     })
-    collectionList.tableData = formatResultData
+    collectionList.unpublishData = unpublishData
+    collectionList.publishedData = publishedData
 }
 
 getCollectionList()
 
-const goToCollectionForm = (index?: number) => {
-    if (index !== undefined) {
-        const { id } = collectionList.tableData[index]
-        router.push({ path: '/collectionForm', query: { id } })
+const goToCollectionForm = (index?: number, type?: string) => {
+    if (index !== undefined && type !== undefined) {
+        const curData = type === 'unpublishData' ? collectionList.unpublishData : collectionList.publishedData
+        const { id } = curData[index]
+        router.push({ path: '/collectionForm', query: { id,type } })
     } else {
         router.push('/collectionForm')
     }
@@ -112,8 +166,8 @@ const handleSearch = () => {
 
 const dialogVisible = ref(false)
 const deleteId = ref('')
-const handleDelete = (index: number) => {
-    deleteId.value = collectionList.tableData[index].id
+const handleDelete = (id: string) => {
+    deleteId.value = id
     dialogVisible.value = true
 }
 
@@ -137,41 +191,59 @@ const handleConfirmDelete = () => {
     }
 }
 
-const handleSelectionChange = (val: CollectionItemProps[]) => {
-    multipleSelection.value = val
+const handleUnpublishSelectionChange = (val: CollectionItemProps[]) => {
+    unpublishMultipleSelection.value = val
 }
 
-const handlePublish = (index: number) => {
-    const publishedStatus = collectionList.tableData[index].published
+const handlePublishedSelectionChange = (val: CollectionItemProps[]) => {
+    publishedMultipleSelection.value = val
+}
+
+const handlePublish = (collection: CollectionItemProps) => {
     request({
         url: '/toggleCollectionPublishStatus',
         method: 'post',
         data: {
-            collectionIds: [collectionList.tableData[index].id],
-            publishedStatus
+            collections:[collection],
+            publishedStatus: !collection.published
         }
     }).then(() => {
         getCollectionList()
         ElMessage({
-            message: `${publishedStatus ? '取消' : ''}发布成功`,
+            message: `${collection.published ? '取消' : ''}发布成功`,
             type: 'success',
         })
     })
 }
 
-const handleBatchPublish = (publishedStatus:boolean) => {
-    const collectionIds = multipleSelection.value.map(item => item.id)
+const handleUnPublishedBatchPublish = () => {
     request({
         url: '/toggleCollectionPublishStatus',
         method: 'post',
         data: {
-            collectionIds,
-            publishedStatus
+            collections: publishedMultipleSelection.value,
+            publishedStatus: false
         }
     }).then(() => {
         getCollectionList()
         ElMessage({
-            message: `批量${publishedStatus ? '取消' : ''}发布成功`,
+            message: `批量取消发布成功`,
+            type: 'success',
+        })
+    })
+}
+const handlePublishBatchPublish = () => {
+    request({
+        url: '/toggleCollectionPublishStatus',
+        method: 'post',
+        data: {
+            collections:unpublishMultipleSelection.value,
+            publishedStatus:true
+        }
+    }).then(() => {
+        getCollectionList()
+        ElMessage({
+            message: `批量发布成功`,
             type: 'success',
         })
     })

@@ -27,6 +27,9 @@
         <el-form-item label="官方微博">
             <el-input v-model="form.data.followWeibo" />
         </el-form-item>
+        <el-form-item label="反馈">
+            <el-input v-model="form.data.feedback" />
+        </el-form-item>
         <el-form-item>
             <el-button type="primary" @click="onSubmit">保存</el-button>
         </el-form-item>
@@ -73,7 +76,8 @@ const form = reactive({
         followUs:'',
         followJike:'',
         followX:'',
-        followWeibo:''
+        followWeibo:'',
+        feedback:''
     }
 })
 
