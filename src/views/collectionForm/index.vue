@@ -157,7 +157,8 @@ import Sortable, { SortableEvent } from 'sortablejs';
 import WallpaperTitle from '@/components/WallpaperTitle.vue';
 import request from '@/utils/request';
 import { isCredentialsExpired } from '@/utils/upload'
-import { CollectionFormProps, WallpaperItemProps, WallpaperFormProps, AuthorProps } from './interface'
+import { CollectionFormProps, WallpaperItemProps, WallpaperFormProps } from './interface'
+import { AuthorProps } from '../author/interface';
 
 const IMG_SPLIT = '&'
 const router = useRouter();

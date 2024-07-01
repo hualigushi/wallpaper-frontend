@@ -5,6 +5,7 @@
     <h2>作者列表</h2>
     <el-table :data="authorList.tableData" stripe style="width: 100%">
         <el-table-column prop="name" label="作者名称" />
+        <el-table-column prop="personalHomepage" label="个人主页" />
         <el-table-column prop="updatedAt" label="修改时间" width="180" />
         <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column fixed="right" label="操作" width="180">
@@ -44,6 +45,9 @@
             trigger: 'blur',
         }
     ]" />
+            </el-form-item>
+            <el-form-item label="个人主页">
+                <el-input v-model="form.personalHomepage" autocomplete="off" />
             </el-form-item>
         </el-form>
         <template #footer>
@@ -90,13 +94,15 @@ const dialogFormVisible = ref(false)
 const form = reactive({
     id: '',
     name: '',
+    personalHomepage: ''
 })
 const dialogVisible = ref(false)
 const deleteId = ref('')
 
 const handleAddAuthor = () => {
     form.id = ''
-    form.name= ''
+    form.name = ''
+    form.personalHomepage = ''
     dialogFormVisible.value = true
     deleteId.value = ''
 }
@@ -151,7 +157,8 @@ const handleSaveAuthor = (formEl: FormInstance | undefined) => {
 
 const handleEdit = (index: number) => {
     form.id = authorList.tableData[index].id
-    form.name= authorList.tableData[index].name
+    form.name = authorList.tableData[index].name
+    form.personalHomepage = authorList.tableData[index].personalHomepage
     dialogFormVisible.value = true
 }
 
