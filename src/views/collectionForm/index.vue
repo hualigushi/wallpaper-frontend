@@ -51,8 +51,8 @@
             <el-table-column prop="createdAt" label="创建时间" width="180" />
             <el-table-column fixed="right" label="操作" width="180">
                 <template #default="scope">
-                    <el-button link type="primary" size="small"
-                        @click.prevent="handleEditWallpaper(scope.$index)">{{ isView ? '查看' : '编辑' }}</el-button>
+                    <el-button link type="primary" size="small" @click.prevent="handleEditWallpaper(scope.$index)">{{
+        isView ? '查看' : '编辑' }}</el-button>
                     <el-button link type="primary" size="small"
                         @click.prevent="handleDeleteWallpaper(scope.$index)">删除</el-button>
                 </template>
@@ -108,6 +108,7 @@
         </el-form>
         <div v-show="!!wallpaperForm.id">
             <el-divider />
+            <div style="color:red">注意：壁纸名称不能含有 / & .</div>
             <h3>壁纸封面(只能上传一张图片)</h3>
             <el-upload v-model:file-list="wallpaperCoverImg" action="" :http-request="uploadCoverImgRequest"
                 list-type="picture-card" :on-success="handleSuccess" :on-remove="handleRemoveImg" :limit="1"
@@ -118,8 +119,9 @@
             </el-upload>
             <el-divider />
             <h3>壁纸</h3>
-            <el-upload v-model:file-list="wallpaperImg" action="" :http-request="uploadImgRequest"
-                list-type="picture-card" :on-success="handleSuccess" :on-remove="handleRemoveImg" :disabled="isView">
+            <el-upload ref="wallpaperImgUpload" v-model:file-list="wallpaperImg" action=""
+                :http-request="uploadImgRequest" list-type="picture-card" :on-success="handleSuccess"
+                :on-remove="handleRemoveImg" :disabled="isView" :multiple="true" :before-upload="beforeUpload">
                 <el-icon>
                     <Plus />
                 </el-icon>
@@ -146,19 +148,34 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router';
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElLoading } from 'element-plus'
 import type { FormInstance, UploadProps, UploadUserFile, UploadRequestOptions } from 'element-plus'
 import { Plus, WarnTriangleFilled } from '@element-plus/icons-vue'
+import Sortable, { SortableEvent } from 'sortablejs';
 import WallpaperTitle from '@/components/WallpaperTitle.vue';
 import request from '@/utils/request';
 import { isCredentialsExpired } from '@/utils/upload'
 import { CollectionFormProps, WallpaperItemProps, WallpaperFormProps, AuthorProps } from './interface'
 
+const IMG_SPLIT = '&'
 const router = useRouter();
 const route = useRoute()
 const isView = route.query.type === 'publishedData'
+const wallpaperImgUpload = ref()
+const loadingInstance = ref() // loading
+
+const openLoading = () => {
+    loadingInstance.value = ElLoading.service({
+        lock: true,
+        text: '上传壁纸',
+        background: 'rgba(0, 0, 0, 0.7)'
+    })
+}
+const closeLoading = () => {
+    loadingInstance.value.close()
+}
 
 const goToCollectionList = () => {
     router.push('/')
@@ -205,6 +222,7 @@ const collectionForm = reactive<CollectionFormProps>({
     enTitle: '',
     description: '',
 })
+
 const handleSaveCollection = (formEl: FormInstance | undefined) => {
     if (!formEl) return
     formEl.validate(async (valid) => {
@@ -215,7 +233,6 @@ const handleSaveCollection = (formEl: FormInstance | undefined) => {
                     method: 'post',
                     data: JSON.stringify(collectionForm),
                 });
-                console.log('qly handleSaveCollection update result', result)
                 if (result.data.success) {
                     ElMessage({
                         message: '更新合集成功',
@@ -233,8 +250,6 @@ const handleSaveCollection = (formEl: FormInstance | undefined) => {
                 if (result.data.success) {
                     const { id } = result.data.data
                     collectionForm.id = id
-                    console.log('qly handleSaveCollection add result', result)
-                    console.log('qly collectionFormData', collectionForm)
                     ElMessage({
                         message: '新建合集成功',
                         type: 'success',
@@ -244,8 +259,7 @@ const handleSaveCollection = (formEl: FormInstance | undefined) => {
                 }
             }
         } else {
-            console.log('error submit!')
-            return false
+            console.log('error handleSaveCollection!')
         }
     })
 }
@@ -309,9 +323,9 @@ const handleAddWallpaper = () => {
     dialogFormVisible.value = true
 }
 
-const handleSaveWallpaper = (formEl: FormInstance | undefined) => {
+const handleSaveWallpaper = async (formEl: FormInstance | undefined) => {
     if (!formEl) return
-    formEl.validate(async (valid) => {
+    await formEl.validate(async (valid) => {
         if (valid) {
             if (wallpaperForm.id) {
                 const result = await request({
@@ -319,7 +333,6 @@ const handleSaveWallpaper = (formEl: FormInstance | undefined) => {
                     method: 'post',
                     data: JSON.stringify(wallpaperForm),
                 });
-                console.log('qly handleSaveWallpaper update result', result)
                 if (result.data.success) {
                     ElMessage({
                         message: '更新壁纸成功',
@@ -339,8 +352,6 @@ const handleSaveWallpaper = (formEl: FormInstance | undefined) => {
                 if (result.data.success) {
                     const { id } = result.data.data
                     wallpaperForm.id = id
-                    console.log('qly handleSaveWallpaper add result', result)
-                    console.log('qly wallpaperFormData', wallpaperForm)
                     ElMessage({
                         message: '新建壁纸成功',
                         type: 'success',
@@ -351,15 +362,15 @@ const handleSaveWallpaper = (formEl: FormInstance | undefined) => {
                 }
             }
         } else {
-            console.log('error submit!')
-            return false
+            console.log('error handleSaveWallpaper!')
         }
     })
 }
 
 const dialogDeleteVisible = ref(false)
 const deleteId = ref('')
-const handleEditWallpaper = (index: number) => {
+
+const handleEditWallpaper = async (index: number) => {
     wallpaperForm.id = wallpaperList.tableData[index].id
     wallpaperForm.title = wallpaperList.tableData[index].title
     wallpaperForm.enTitle = wallpaperList.tableData[index].enTitle
@@ -367,11 +378,14 @@ const handleEditWallpaper = (index: number) => {
     wallpaperForm.authorId = wallpaperList.tableData[index].authorId
     getImgs(collectionForm.enTitle, wallpaperForm.enTitle)
     dialogFormVisible.value = true
+    await nextTick()
+    wallpaperSort()
 }
 const handleDeleteWallpaper = (index: number) => {
     deleteId.value = wallpaperList.tableData[index].id
     dialogDeleteVisible.value = true
 }
+
 const handleConfirmDeleteWallpaper = async () => {
     if (deleteId.value) {
         const result = await request({
@@ -412,36 +426,24 @@ const handleConfirmDeleteWallpaper = async () => {
 
 const wallpaperCoverImg = ref<UploadUserFile[]>([])
 const wallpaperImg = ref<UploadUserFile[]>([])
-
-const handleRemoveImg: UploadProps['onRemove'] = async (uploadFile) => {
-    try {
-        await request({
-            url: '/deleteImg',
-            method: 'post',
-            data: {
-                name: uploadFile.name
-            }
-        });
-        ElMessage({
-            message: '删除成功',
-            type: 'success',
-        })
-    } catch (e) {
-        console.log("qly ~ handleRemoveImg ~ e:", e)
-    }
-}
-
 let credentials = ref(null);
 
-const uploadCoverImgRequest = async (option: UploadRequestOptions) => {
-    uploadHttpRequest(option, 'cover')
-}
-const uploadImgRequest = async (option: UploadRequestOptions) => {
-    uploadHttpRequest(option, 'img')
+const beforeUpload = (file: File) => {
+    const rawName = file.name.split('.')[0]
+    const nameTestRes = /^[^/\\&.]+$/.test(rawName)
+    openLoading()
+    return nameTestRes;
 }
 
-const uploadHttpRequest = async (option: UploadRequestOptions, type: string) => {
-    console.log("qly ~ uploadHttpRequest ~ options:", option, type)
+const uploadCoverImgRequest = async (option: UploadRequestOptions) => {
+    uploadHttpRequest(option, `cover-${option.file.name}`)
+}
+const uploadImgRequest = async (option: UploadRequestOptions) => {
+    const wLength = wallpaperImg.value.length
+    uploadHttpRequest(option, `${wLength}${IMG_SPLIT}${option.file.name}`)
+}
+
+const uploadHttpRequest = async (option: UploadRequestOptions, fileName: string) => {
     if (isCredentialsExpired(credentials.value)) {
         const result = await request({
             url: "/get_sts_token_for_oss_upload",
@@ -465,9 +467,12 @@ const uploadHttpRequest = async (option: UploadRequestOptions, type: string) => 
 
     try {
         const fileNamePrefix = `${collectionForm.enTitle}/${wallpaperForm.enTitle}`
-        const fileName = type === 'cover' ? `cover-${option.file.name}` : option.file.name
         const clientResult = await client.put(`${fileNamePrefix}/${fileName}`, option.file);
         console.log('qly clientResult', clientResult);
+        getImgs(collectionForm.enTitle, wallpaperForm.enTitle)
+        setTimeout(() => {
+            closeLoading()
+        }, 500)
     } catch (e) {
         console.log("qly ~ uploadHttpRequest ~ e:", e)
     }
@@ -478,6 +483,84 @@ const handleSuccess = () => {
         message: '上传成功',
         type: 'success',
     })
+}
+
+const handleRemoveImg: UploadProps['onRemove'] = async (uploadFile, uploadFiles) => {
+    try {
+        await request({
+            url: '/deleteImg',
+            method: 'post',
+            data: {
+                name: uploadFile.name
+            }
+        });
+        if (uploadFiles.length) {
+            for (let i = 0; i < uploadFiles.length; i++) {
+                const oldname = uploadFiles[i].name
+                const oldFileName = oldname.split(IMG_SPLIT)[1]
+                const newFileName = `${i + 1}${IMG_SPLIT}${oldFileName}`
+                const fileNamePrefix = `${collectionForm.enTitle}/${wallpaperForm.enTitle}`
+                const newname = `${fileNamePrefix}/${newFileName}`
+                if (oldname !== newname) {
+                    await handleRenameImg(oldname, newname)
+                }
+            }
+        }
+        ElMessage({
+            message: '删除成功 handleRemoveImg',
+            type: 'success',
+        })
+    } catch (e) {
+        console.log("qly ~ handleRemoveImg ~ e:", e)
+    }
+}
+
+const handleRenameImg = async (oldname: string, newname: string) => {
+    try {
+        await request({
+            url: '/renameImg',
+            method: 'post',
+            data: {
+                oldname,
+                newname
+            }
+        });
+    } catch (e) {
+        console.log("qly ~ handleRenameImg ~ e:", e)
+    }
+}
+const handleSwapImg = async (oldname: string, newname: string) => {
+    try {
+        await request({
+            url: '/swapImg',
+            method: 'post',
+            data: {
+                oldname,
+                newname
+            }
+        });
+    } catch (e) {
+        console.log("qly ~ handleRenameImg ~ e:", e)
+    }
+}
+
+const wallpaperSort = () => {
+    if (wallpaperImgUpload.value) {
+        const el = wallpaperImgUpload.value.$el.querySelectorAll('.el-upload-list')[0];
+        Sortable.create(el, {
+            onEnd: async ({ oldIndex, newIndex }: SortableEvent) => {
+                if (oldIndex !== undefined && newIndex !== undefined) {
+                    const oldImgName = wallpaperImg.value[oldIndex].name
+                    const newImgName = wallpaperImg.value[newIndex].name
+
+                    openLoading()
+                    await handleSwapImg(oldImgName, newImgName)
+                    getImgs(collectionForm.enTitle, wallpaperForm.enTitle)
+                    closeLoading()
+                }
+            }
+        });
+    }
 }
 
 </script>
