@@ -1,24 +1,24 @@
 <template>
     <WallpaperTitle />
-    <el-button type="primary" @click="goToCollectionForm()">新增合集</el-button>
+    <el-button type="primary" @click="goToLiveWallpaperForm()">新增动态壁纸</el-button>
     <el-divider />
-    <h2>壁纸合集列表</h2>
+    <h2>动态壁纸列表</h2>
     <el-tabs v-model="activeName">
-        <el-tab-pane label="未发布合集" name="first">
+        <el-tab-pane label="未发布动态壁纸" name="first">
             <div class="search-wrapper">
                 <div>
-                    <span class="search-label">合集名称</span>
-                    <el-input v-model="collectionName" style="width: 240px" placeholder="请输入壁纸合集名称" />
+                    <span class="search-label">动态壁纸名称</span>
+                    <el-input v-model="liveWallpaperName" style="width: 240px" placeholder="请输入壁纸动态壁纸名称" />
                 </div>
                 <el-button type="primary" @click="handleSearch" class="search-btn">查询</el-button>
             </div>
             <el-button type="primary" @click.prevent="handlePublishBatchPublish">发布</el-button>
-            <el-table :data="collectionList.unpublishData" stripe style="width: 100%"
+            <el-table :data="liveWallpaperList.unpublishData" stripe style="width: 100%"
                 @selection-change="handleUnpublishSelectionChange">
                 <el-table-column type="selection" width="55" />
-                <el-table-column prop="title" label="合集名称" />
-                <el-table-column prop="enTitle" label="合集名称英文" width="180" />
-                <el-table-column prop="description" label="合集描述" width="180" />
+                <el-table-column prop="title" label="动态壁纸名称" />
+                <el-table-column prop="enTitle" label="动态壁纸名称英文" width="180" />
+                <!-- <el-table-column prop="tags" label="动态壁纸标签" width="180" /> -->
                 <el-table-column prop="downloadCount" label="下载量" width="120" />
                 <el-table-column prop="published" label="发布状态" width="120">
                     <template #default="scope">
@@ -32,28 +32,28 @@
                         <el-button link type="primary" size="small"
                             @click.prevent="handlePublish(scope.row)">发布</el-button>
                         <el-button link type="primary" size="small"
-                            @click.prevent="goToCollectionForm(scope.$index, 'unpublishData')">编辑</el-button>
+                            @click.prevent="goToLiveWallpaperForm(scope.$index, 'unpublishData')">编辑</el-button>
                         <el-button link type="primary" size="small"
-                            @click.prevent="handleDelete(scope.row.id)">删除</el-button>
+                            @click.prevent="handleDelete(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
         </el-tab-pane>
-        <el-tab-pane label="已发布合集" name="second">
+        <el-tab-pane label="已发布动态壁纸" name="second">
             <div class="search-wrapper">
                 <div>
-                    <span class="search-label">合集名称</span>
-                    <el-input v-model="collectionName" style="width: 240px" placeholder="请输入壁纸合集名称" />
+                    <span class="search-label">动态壁纸名称</span>
+                    <el-input v-model="liveWallpaperName" style="width: 240px" placeholder="请输入壁纸动态壁纸名称" />
                 </div>
                 <el-button type="primary" @click="handleSearch" class="search-btn">查询</el-button>
             </div>
             <el-button type="primary" @click.prevent="handleUnPublishedBatchPublish">取消发布</el-button>
-            <el-table :data="collectionList.publishedData" stripe style="width: 100%"
+            <el-table :data="liveWallpaperList.publishedData" stripe style="width: 100%"
                 @selection-change="handlePublishedSelectionChange">
                 <el-table-column type="selection" width="55" />
-                <el-table-column prop="title" label="合集名称" />
-                <el-table-column prop="enTitle" label="合集名称英文" width="180" />
-                <el-table-column prop="description" label="合集描述" width="180" />
+                <el-table-column prop="title" label="动态壁纸名称" />
+                <el-table-column prop="enTitle" label="动态壁纸名称英文" width="180" />
+                <el-table-column prop="description" label="动态壁纸描述" width="180" />
                 <el-table-column prop="downloadCount" label="下载量" width="120" />
                 <el-table-column prop="published" label="发布状态" width="120">
                     <template #default="scope">
@@ -67,7 +67,7 @@
                         <el-button link type="primary" size="small"
                             @click.prevent="handlePublish(scope.row)">取消发布</el-button>
                         <el-button link type="primary" size="small"
-                            @click.prevent="goToCollectionForm(scope.$index, 'publishedData')">查看</el-button>
+                            @click.prevent="goToLiveWallpaperForm(scope.$index, 'publishedData')">查看</el-button>
                         <!-- <el-button link type="primary" size="small"
                             @click.prevent="handleDelete(scope.$index)">删除</el-button> -->
                     </template>
@@ -103,165 +103,165 @@ import { ElMessage, ElTable } from 'element-plus'
 import { WarnTriangleFilled } from '@element-plus/icons-vue'
 import WallpaperTitle from '@/components/WallpaperTitle.vue';
 import request from '@/utils/request';
-import { CollectionItemProps } from './interface';
+import { LiveWallpaperItemProps } from './interface';
+import { deleteImgsWithPrefix, getImgsWithPrefix, WALLPAPER_TYPE } from '@/utils/ossFileName';
 
 const router = useRouter();
 
 const activeName = ref('first')
-const collectionName = ref('')
-const unpublishMultipleSelection = ref<CollectionItemProps[]>([])
-const publishedMultipleSelection = ref<CollectionItemProps[]>([])
-let collectionList = reactive<{
-    unpublishData: CollectionItemProps[],
-    publishedData: CollectionItemProps[],
+const liveWallpaperName = ref('')
+const unpublishMultipleSelection = ref<LiveWallpaperItemProps[]>([])
+const publishedMultipleSelection = ref<LiveWallpaperItemProps[]>([])
+let liveWallpaperList = reactive<{
+    unpublishData: LiveWallpaperItemProps[],
+    publishedData: LiveWallpaperItemProps[],
 
 }>({
     unpublishData: [],
     publishedData: [],
 })
 
-const getCollectionList = async () => {
+const getLiveWallpaperList = async () => {
     const result = await request({
-        url: '/getCollectionList',
+        url: '/getLiveWallpaperList',
         method: 'post',
         data: {
-            collectionName: collectionName.value
+            liveWallpaperName: liveWallpaperName.value
         }
     });
-    let unpublishData: CollectionItemProps[] = []
-    let publishedData: CollectionItemProps[] = []
-    result.data.forEach((item: CollectionItemProps) => {
+    let unpublishData: LiveWallpaperItemProps[] = []
+    let publishedData: LiveWallpaperItemProps[] = []
+    result.data.forEach((item: LiveWallpaperItemProps) => {
         if (item.published) {
             publishedData.push({
                 ...item,
-                publishAt: !item.publishAt ? '':new Date(item.publishAt!).toLocaleString(),
+                publishAt: !item.publishAt ? '' : new Date(item.publishAt!).toLocaleString(),
             })
         } else {
             unpublishData.push({
                 ...item,
-                publishAt: !item.publishAt ? '':new Date(item.publishAt!).toLocaleString(),
+                publishAt: !item.publishAt ? '' : new Date(item.publishAt!).toLocaleString(),
             })
         }
     })
-    collectionList.unpublishData = unpublishData
-    collectionList.publishedData = publishedData
+    liveWallpaperList.unpublishData = unpublishData
+    liveWallpaperList.publishedData = publishedData
 }
 
-getCollectionList()
+getLiveWallpaperList()
 
-const goToCollectionForm = (index?: number, type?: string) => {
+const goToLiveWallpaperForm = (index?: number, type?: string) => {
     if (index !== undefined && type !== undefined) {
-        const curData = type === 'unpublishData' ? collectionList.unpublishData : collectionList.publishedData
+        const curData = type === 'unpublishData' ? liveWallpaperList.unpublishData : liveWallpaperList.publishedData
         const { id } = curData[index]
-        router.push({ path: '/collectionForm', query: { id,type } })
+        router.push({ path: '/liveWallpaperForm', query: { id, type } })
     } else {
-        router.push('/collectionForm')
+        router.push('/liveWallpaperForm')
     }
 }
 
 const handleSearch = () => {
-    console.log('handleSearch', collectionName.value)
-    getCollectionList()
+    getLiveWallpaperList()
 }
 
 const dialogVisible = ref(false)
-const deleteId = ref('')
-const handleDelete = (id: string) => {
-    deleteId.value = id
+const deleteItem = ref<LiveWallpaperItemProps | null>()
+const handleDelete = (liveWallpaperItem: LiveWallpaperItemProps) => {
+    deleteItem.value = liveWallpaperItem
     dialogVisible.value = true
 }
 
 const handleConfirmDelete = () => {
-    if (deleteId.value) {
+    if (deleteItem.value) {
         request({
-            url: '/deleteCollection',
+            url: '/deleteLiveWallpaper',
             method: 'post',
             data: {
-                id: deleteId.value
+                id: deleteItem.value.id
             }
-        }).then(() => {
-            getCollectionList()
+        }).then(async () => {
+            getLiveWallpaperList()
+            const imgsResult = await getImgsWithPrefix(WALLPAPER_TYPE.LIVE_WALLPAPER, deleteItem.value!.enTitle);
+            if (imgsResult.length) {
+                await deleteImgsWithPrefix(WALLPAPER_TYPE.LIVE_WALLPAPER, deleteItem.value!.enTitle)
+            }
+            dialogVisible.value = false
+            deleteItem.value = null
             ElMessage({
                 message: '删除成功',
                 type: 'success',
             })
-        }).catch(() => {
-            ElMessage({
-                message: '删除失败, 请先删除合集中的壁纸',
-                type: 'error',
-            })
-        }).finally(() => {
-            dialogVisible.value = false
-            deleteId.value = ''
         })
+
     }
 }
 
-const handleUnpublishSelectionChange = (val: CollectionItemProps[]) => {
+const handleUnpublishSelectionChange = (val: LiveWallpaperItemProps[]) => {
     unpublishMultipleSelection.value = val
 }
 
-const handlePublishedSelectionChange = (val: CollectionItemProps[]) => {
+const handlePublishedSelectionChange = (val: LiveWallpaperItemProps[]) => {
     publishedMultipleSelection.value = val
 }
 
-const handlePublish = (collection: CollectionItemProps) => {
+const handlePublish = (liveWallpaperItem: LiveWallpaperItemProps) => {
     request({
-        url: '/toggleCollectionPublishStatus',
+        url: '/toggleLiveWallpaperPublishStatus',
         method: 'post',
         data: {
-            collections:[collection],
-            publishedStatus: !collection.published
+            liveWallpaperSelection: [liveWallpaperItem],
+            publishedStatus: !liveWallpaperItem.published
         }
     }).then(() => {
-        getCollectionList()
+        getLiveWallpaperList()
         ElMessage({
-            message: `${collection.published ? '取消' : ''}发布成功`,
+            message: `${liveWallpaperItem.published ? '取消' : ''}发布成功`,
             type: 'success',
         })
     })
 }
 
 const handleUnPublishedBatchPublish = () => {
-    if(!publishedMultipleSelection.value.length){
+    if (!publishedMultipleSelection.value.length) {
         ElMessage({
-            message: `请选择要取消发布的合集`,
+            message: `请选择要取消发布的动态壁纸`,
             type: 'warning',
         })
         return
     }
     request({
-        url: '/toggleCollectionPublishStatus',
+        url: '/toggleLiveWallpaperPublishStatus',
         method: 'post',
         data: {
-            collections: publishedMultipleSelection.value,
+            liveWallpaperSelection: publishedMultipleSelection.value,
             publishedStatus: false
         }
     }).then(() => {
-        getCollectionList()
+        getLiveWallpaperList()
         ElMessage({
             message: `批量取消发布成功`,
             type: 'success',
         })
     })
 }
+
 const handlePublishBatchPublish = () => {
-    if(!unpublishMultipleSelection.value.length){
+    if (!unpublishMultipleSelection.value.length) {
         ElMessage({
-            message: `请选择要发布的合集`,
+            message: `请选择要发布的动态壁纸`,
             type: 'warning',
         })
         return
     }
     request({
-        url: '/toggleCollectionPublishStatus',
+        url: '/toggleLiveWallpaperPublishStatus',
         method: 'post',
         data: {
-            collections:unpublishMultipleSelection.value,
-            publishedStatus:true
+            liveWallpaperSelection: unpublishMultipleSelection.value,
+            publishedStatus: true
         }
     }).then(() => {
-        getCollectionList()
+        getLiveWallpaperList()
         ElMessage({
             message: `批量发布成功`,
             type: 'success',

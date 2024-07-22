@@ -1,11 +1,10 @@
 <template>
     <WallpaperTitle />
-    <el-button type="primary" @click="handleAddAuthor">新增作者</el-button>
+    <el-button type="primary" @click="handleAddTag">新增标签</el-button>
     <el-divider />
-    <h2>作者列表</h2>
-    <el-table :data="authorList.tableData" stripe style="width: 100%">
-        <el-table-column prop="name" label="作者名称" />
-        <el-table-column prop="personalHomepage" label="个人主页" />
+    <h2>标签列表</h2>
+    <el-table :data="tagList.tableData" stripe style="width: 100%">
+        <el-table-column prop="name" label="标签名称" />
         <el-table-column prop="updatedAt" label="修改时间" width="180" />
         <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column fixed="right" label="操作" width="180">
@@ -32,28 +31,25 @@
         </template>
     </el-dialog>
 
-    <el-dialog v-model="dialogFormVisible" title="作者信息" width="500">
+    <el-dialog v-model="dialogFormVisible" title="标签信息" width="500">
         <el-form :model="form" ref="formRef">
             <el-form-item v-show="false">
                 <el-input v-model="form.id" autocomplete="off" />
             </el-form-item>
-            <el-form-item label="作者名称">
+            <el-form-item label="标签名称">
                 <el-input v-model="form.name" autocomplete="off" :rules="[
         {
             required: true,
-            message: '请输入作者名称',
+            message: '请输入标签名称',
             trigger: 'blur',
         }
     ]" />
-            </el-form-item>
-            <el-form-item label="个人主页">
-                <el-input v-model="form.personalHomepage" autocomplete="off" />
             </el-form-item>
         </el-form>
         <template #footer>
             <div class="dialog-footer">
                 <el-button @click="dialogFormVisible = false">取消</el-button>
-                <el-button type="primary" @click="handleSaveAuthor(formRef)">
+                <el-button type="primary" @click="handleSaveTag(formRef)">
                     确认
                 </el-button>
             </div>
@@ -66,61 +62,59 @@ import { ElMessage, FormInstance } from 'element-plus'
 import { WarnTriangleFilled } from '@element-plus/icons-vue'
 import WallpaperTitle from '@/components/WallpaperTitle.vue';
 import request from '@/utils/request';
-import { AuthorProps } from './interface';
+import { TagProps } from './interface';
 
-let authorList = reactive<{
-    tableData: AuthorProps[]
+let tagList = reactive<{
+    tableData: TagProps[]
 }>({ tableData: [] })
 
-const getAuthorList = async () => {
+const getTagList = async () => {
     const result = await request({
-        url: '/getAuthorList',
+        url: '/getTagList',
         method: 'post',
     });
-    const formatResultData: AuthorProps[] = result.data.map((item: AuthorProps) => {
+    const formatResultData: TagProps[] = result.data.map((item: TagProps) => {
         return {
             ...item,
             createdAt: new Date(item.createdAt).toLocaleString(),
             updatedAt: new Date(item.updatedAt).toLocaleString(),
         }
     })
-    authorList.tableData = formatResultData
+    tagList.tableData = formatResultData
 }
 
-getAuthorList()
+getTagList()
 
 const formRef = ref<FormInstance>()
 const dialogFormVisible = ref(false)
 const form = reactive({
     id: '',
     name: '',
-    personalHomepage: ''
 })
 const dialogVisible = ref(false)
 const deleteId = ref('')
 
-const handleAddAuthor = () => {
+const handleAddTag = () => {
     form.id = ''
     form.name = ''
-    form.personalHomepage = ''
     dialogFormVisible.value = true
     deleteId.value = ''
 }
 
-const handleSaveAuthor = (formEl: FormInstance | undefined) => {
+const handleSaveTag = (formEl: FormInstance | undefined) => {
     if (!formEl) return
     formEl.validate(async (valid) => {
         if (valid) {
             if (form.id) {
                 const result = await request({
-                    url: '/addOrUpdateAuthor',
+                    url: '/addOrUpdateTag',
                     method: 'post',
                     data: JSON.stringify(form),
                 });
                 if (result.data.success) {
-                    getAuthorList()
+                    getTagList()
                     ElMessage({
-                        message: '更新作者成功',
+                        message: '更新标签成功',
                         type: 'success',
                     })
                     dialogFormVisible.value = false
@@ -129,16 +123,16 @@ const handleSaveAuthor = (formEl: FormInstance | undefined) => {
                 }
             } else {
                 const result = await request({
-                    url: '/addOrUpdateAuthor',
+                    url: '/addOrUpdateTag',
                     method: 'post',
                     data: JSON.stringify(form),
                 });
                 if (result.data.success) {
                     const { id } = result.data.data
                     form.id = id
-                    getAuthorList()
+                    getTagList()
                     ElMessage({
-                        message: '新建作者成功',
+                        message: '新建标签成功',
                         type: 'success',
                     })
                     dialogFormVisible.value = false
@@ -147,32 +141,31 @@ const handleSaveAuthor = (formEl: FormInstance | undefined) => {
                 }
             }
         } else {
-            console.log('error handleSaveAuthor!')
+            console.log('error handleSaveTag!')
         }
     })
 }
 
 const handleEdit = (index: number) => {
-    form.id = authorList.tableData[index].id
-    form.name = authorList.tableData[index].name
-    form.personalHomepage = authorList.tableData[index].personalHomepage
+    form.id = tagList.tableData[index].id
+    form.name = tagList.tableData[index].name
     dialogFormVisible.value = true
 }
 
 const handleDelete = (index: number) => {
-    deleteId.value = authorList.tableData[index].id
+    deleteId.value = tagList.tableData[index].id
     dialogVisible.value = true
 }
 const handleConfirmDelete = () => {
     if (deleteId.value) {
         request({
-            url: '/deleteAuthor',
+            url: '/deleteTag',
             method: 'post',
             data: {
                 id: deleteId.value
             }
         }).then(() => {
-            getAuthorList()
+            getTagList()
             ElMessage({
                 message: '删除成功',
                 type: 'success',

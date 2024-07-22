@@ -45,7 +45,7 @@
         <el-table :data="wallpaperList.tableData" stripe style="width: 100%">
             <el-table-column prop="title" label="壁纸名称" />
             <el-table-column prop="enTitle" label="壁纸名称英文名" width="180" />
-            <el-table-column prop="tags" label="壁纸标签" width="180" />
+            <!-- <el-table-column prop="tags" label="壁纸标签" width="180" /> -->
             <el-table-column prop="downloadCount" label="下载量" width="140" />
             <el-table-column prop="updatedAt" label="修改时间" width="180" />
             <el-table-column prop="createdAt" label="创建时间" width="180" />
@@ -85,15 +85,18 @@
     ]
         " />
             </el-form-item>
-            <el-form-item label="壁纸标签" label-width="140px">
-                <el-input v-model="wallpaperForm.tags" placeholder="多个标签以空格分割" autocomplete="off" :rules="[
+            <el-form-item label="壁纸标签" label-width="140px" :rules="[
         {
             required: true,
-            message: '请输入壁纸标签',
+            message: '请选择壁纸标签',
             trigger: 'blur',
         }
     ]
-        " />
+        ">
+                <el-select v-model="wallpaperForm.tags" multiple filterable default-first-option
+                    :reserve-keyword="false" placeholder="请选择动态壁纸标签">
+                    <el-option v-for="item in tagList" :key="item.id" :label="item.name" :value="item.id" />
+                </el-select>
             </el-form-item>
             <el-form-item label="作者" label-width="140px">
                 <el-select v-model="wallpaperForm.authorId" :disabled="!authorList.length">
@@ -159,6 +162,8 @@ import request from '@/utils/request';
 import { isCredentialsExpired } from '@/utils/upload'
 import { CollectionFormProps, WallpaperItemProps, WallpaperFormProps } from './interface'
 import { AuthorProps } from '../author/interface';
+import { TagProps } from '../tag/interface';
+import { WALLPAPER_TYPE, ossFullName, getImgsWithPrefix, deleteImgsWithPrefix } from '@/utils/ossFileName';
 
 const IMG_SPLIT = '&'
 const router = useRouter();
@@ -166,6 +171,8 @@ const route = useRoute()
 const isView = route.query.type === 'publishedData'
 const wallpaperImgUpload = ref()
 const loadingInstance = ref() // loading
+const authorList = ref<AuthorProps[]>([])
+const tagList = ref<TagProps[]>([])
 
 const openLoading = () => {
     loadingInstance.value = ElLoading.service({
@@ -182,8 +189,6 @@ const goToCollectionList = () => {
     router.push('/')
 }
 
-const authorList = ref<AuthorProps[]>([])
-
 const getAuthorList = async () => {
     const result = await request({
         url: '/getAuthorList',
@@ -196,6 +201,16 @@ const getAuthorList = async () => {
 }
 
 getAuthorList()
+
+const getTagList = async () => {
+    const result = await request({
+        url: '/getTagList',
+        method: 'post',
+    });
+    tagList.value = result.data
+}
+
+getTagList()
 
 const getCollectionItem = async () => {
     if (route.query.id) {
@@ -287,17 +302,11 @@ const getWallpaperList = async (collectionId: string) => {
     wallpaperList.tableData = formatResultData
 }
 
-const getImgs = async (collectionEnTitle: string, wallpaperEnTitle: string) => {
-    const result = await request({
-        url: '/getImgsWithPrefix',
-        method: 'post',
-        data: {
-            collectionEnTitle,
-            wallpaperEnTitle
-        }
-    });
-    wallpaperCoverImg.value = result.data.filter((item: UploadUserFile) => item.name.includes('cover'))
-    wallpaperImg.value = result.data.filter((item: UploadUserFile) => !item.name.includes('cover'))
+const getImgs = async () => {
+    const prefix = `${collectionForm.enTitle}/${wallpaperForm.enTitle}/`;
+    const imgsResult = await getImgsWithPrefix(WALLPAPER_TYPE.WALLPAPER, prefix);
+    wallpaperCoverImg.value = imgsResult.filter((item: UploadUserFile) => item.name.includes('cover'))
+    wallpaperImg.value = imgsResult.filter((item: UploadUserFile) => !item.name.includes('cover'))
 }
 
 const dialogFormVisible = ref(false)
@@ -319,7 +328,7 @@ const handleAddWallpaper = () => {
     wallpaperCoverImg.value = []
     wallpaperImg.value = []
     if (authorList.value.length) {
-        wallpaperForm.authorId = authorList.value[authorList.value.length - 1].id
+        wallpaperForm.authorId = authorList.value[0].id
     }
     dialogFormVisible.value = true
 }
@@ -377,7 +386,7 @@ const handleEditWallpaper = async (index: number) => {
     wallpaperForm.enTitle = wallpaperList.tableData[index].enTitle
     wallpaperForm.tags = wallpaperList.tableData[index].tags
     wallpaperForm.authorId = wallpaperList.tableData[index].authorId
-    getImgs(collectionForm.enTitle, wallpaperForm.enTitle)
+    getImgs()
     dialogFormVisible.value = true
     await nextTick()
     wallpaperSort()
@@ -389,7 +398,7 @@ const handleDeleteWallpaper = (index: number) => {
 
 const handleConfirmDeleteWallpaper = async () => {
     if (deleteId.value) {
-        const result = await request({
+        const deleteItem = await request({
             url: '/deleteWallpaper',
             method: 'post',
             data: {
@@ -397,23 +406,10 @@ const handleConfirmDeleteWallpaper = async () => {
             }
         })
         getWallpaperList(collectionForm.id)
-        const imgsResult = await request({
-            url: '/getImgsWithPrefix',
-            method: 'post',
-            data: {
-                collectionEnTitle: collectionForm.enTitle,
-                wallpaperEnTitle: result.data.enTitle
-            }
-        });
-        if (imgsResult.data.length) {
-            await request({
-                url: '/deleteImgsWithPrefix',
-                method: 'post',
-                data: {
-                    collectionEnTitle: collectionForm.enTitle,
-                    wallpaperEnTitle: result.data.enTitle
-                }
-            });
+        const prefix = `${collectionForm.enTitle}/${deleteItem.data.enTitle}/`;
+        const imgsResult = await getImgsWithPrefix(WALLPAPER_TYPE.WALLPAPER, prefix);
+        if (imgsResult.length) {
+            await deleteImgsWithPrefix(WALLPAPER_TYPE.WALLPAPER, prefix)
         }
 
         ElMessage({
@@ -468,9 +464,9 @@ const uploadHttpRequest = async (option: UploadRequestOptions, fileName: string)
 
     try {
         const fileNamePrefix = `${collectionForm.enTitle}/${wallpaperForm.enTitle}`
-        const clientResult = await client.put(`${fileNamePrefix}/${fileName}`, option.file);
-        console.log('qly clientResult', clientResult);
-        getImgs(collectionForm.enTitle, wallpaperForm.enTitle)
+        const ossFileName = ossFullName(WALLPAPER_TYPE.WALLPAPER, fileNamePrefix, fileName)
+        await client.put(ossFileName, option.file);
+        getImgs()
         setTimeout(() => {
             closeLoading()
         }, 500)
@@ -556,7 +552,7 @@ const wallpaperSort = () => {
 
                     openLoading()
                     await handleSwapImg(oldImgName, newImgName)
-                    getImgs(collectionForm.enTitle, wallpaperForm.enTitle)
+                    getImgs()
                     closeLoading()
                 }
             }
