@@ -12,6 +12,7 @@ export interface WallpaperFormProps {
     tags: string;
     collectionId: string;
     authorId: string;
+    uiType: string;
 }
 
 export interface WallpaperItemProps {
@@ -23,4 +24,5 @@ export interface WallpaperItemProps {
     createdAt: string;
     updatedAt: string;
     authorId: string;
+    uiType: string;
 }
