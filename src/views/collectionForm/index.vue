@@ -46,6 +46,7 @@
             <el-table-column prop="title" label="壁纸名称" />
             <el-table-column prop="enTitle" label="壁纸名称英文名" width="180" />
             <el-table-column prop="uiType" label="UI Type" width="100" />
+            <el-table-column prop="uiColor" label="UI Color" width="100" />
             <!-- <el-table-column prop="tags" label="壁纸标签" width="180" /> -->
             <el-table-column prop="downloadCount" label="下载量" width="140" />
             <el-table-column prop="updatedAt" label="修改时间" width="180" />
@@ -92,6 +93,9 @@
                     <el-radio value="3">3</el-radio>
                     <el-radio value="4">4</el-radio>
                 </el-radio-group>
+            </el-form-item>
+            <el-form-item label="UI Color" label-width="140px">
+                <el-input v-model="wallpaperForm.uiColor" autocomplete="off" />
             </el-form-item>
             <el-form-item label="壁纸标签" label-width="140px" :rules="[
         {
@@ -326,7 +330,8 @@ const wallpaperForm = reactive<WallpaperFormProps>({
     tags: '',
     collectionId: '',
     authorId: '',
-    uiType:'1'
+    uiType:'1',
+    uiColor:'#ffffff'
 })
 
 const handleAddWallpaper = () => {

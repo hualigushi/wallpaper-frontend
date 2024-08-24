@@ -13,16 +13,11 @@ export interface WallpaperFormProps {
     collectionId: string;
     authorId: string;
     uiType: string;
+    uiColor: string;
 }
 
-export interface WallpaperItemProps {
-    id: string;
-    title: string;
-    enTitle: string;
-    tags: string;
+export interface WallpaperItemProps extends WallpaperFormProps {
     downloadCount: string;
     createdAt: string;
     updatedAt: string;
-    authorId: string;
-    uiType: string;
 }

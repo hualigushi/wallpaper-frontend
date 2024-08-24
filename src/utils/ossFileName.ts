@@ -5,15 +5,17 @@ export enum WALLPAPER_TYPE {
     LIVE_WALLPAPER = 'live'
 }
 
+const imgPrefixPath = {
+    [WALLPAPER_TYPE.WALLPAPER]: 'wallpaper',
+    [WALLPAPER_TYPE.LIVE_WALLPAPER]: 'liveWallpaper'
+}
+
 export const ossFullName = (type: WALLPAPER_TYPE, fileNamePrefix: string, fileName: string) => {
-    if (type === WALLPAPER_TYPE.WALLPAPER) {
-        return `wallpaper/${fileNamePrefix}/${fileName}`
-    }
-    return `liveWallpaper/${fileNamePrefix}/${fileName}`
+    return `${imgPrefixPath[type]}/${fileNamePrefix}/${fileName}`
 }
 
 export const getImgsWithPrefix = async (type: WALLPAPER_TYPE, prefix: string) => {
-    const ossPrefix = type === WALLPAPER_TYPE.WALLPAPER ? `wallpaper/${prefix}` : `liveWallpaper/${prefix}`;
+    const ossPrefix = `${imgPrefixPath[type]}/${prefix}`;
     try {
         const imgsResult = await request({
             url: '/getImgsWithPrefix',
@@ -29,7 +31,7 @@ export const getImgsWithPrefix = async (type: WALLPAPER_TYPE, prefix: string) =>
 }
 
 export const deleteImgsWithPrefix = async (type: WALLPAPER_TYPE, prefix: string) => {
-    const ossPrefix = type === WALLPAPER_TYPE.WALLPAPER ? `wallpaper/${prefix}` : `liveWallpaper/${prefix}`;
+    const ossPrefix = `${imgPrefixPath[type]}/${prefix}`;
     try {
         const imgsResult = await request({
             url: '/deleteImgsWithPrefix',
